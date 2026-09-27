@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMART SENTINELS | Multi-Channel NVR</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        background: #0d0f17;
+        color: #e8edf7;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+    .topbar {
+        padding: 18px 22px 10px;
+        border-bottom: 1px solid #252a38;
+    }
+    .brand {
+        font-size: 25px;
+        font-weight: 700;
+        color: #67c7ff;
+        letter-spacing: .3px;
+    }
+    .brand span {
+        color: #9aa4b8;
+        font-size: 17px;
+        font-weight: 500;
+    }
+    .live {
+        float: right;
+        background: #62df7d;
+        color: #07100a;
+        padding: 7px 13px;
+        border-radius: 5px;
+        font-weight: 700;
+        font-size: 13px;
+    }
+    .viewbar {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 14px 16px;
+        font-size: 14px;
+    }
+    .viewbar strong {
+        margin-right: 5px;
+        font-weight: 500;
+    }
+    button {
+        border: 0;
+        border-radius: 5px;
+        padding: 9px 14px;
+        background: #293141;
+        color: #e8edf7;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    button:hover { filter: brightness(1.15); }
+    button.active { background: #6fc7f7; color: #081019; }
+    .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 3.1fr) minmax(300px, 1fr);
+        gap: 14px;
+        padding: 0 17px 17px;
+    }
+    .camera-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+    .camera-grid.all {
+        grid-template-columns: 1fr 1fr;
+    }
+    .camera-card, .log-card, .controlbar {
+        background: #171b26;
+        border: 1px solid #2b3243;
+        border-radius: 9px;
+    }
+    .camera-card {
+        padding: 12px;
+    }
+    .camera-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 9px;
+        gap: 8px;
+    }
+    .camera-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #eaf0fa;
+    }
+    .camera-title span {
+        color: #9aa6bb;
+        font-weight: 400;
+    }
+    .camera-buttons {
+        display: flex;
+        gap: 6px;
+    }
+    .camera-buttons button {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+    .camera-stage {
+        position: relative;
+        width: 100%;
+        background: #000;
+        border: 1px solid #30384a;
+        border-radius: 5px;
+        overflow: hidden;
+        line-height: 0;
+    }
+    .camera-stage img {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 280px;
+        object-fit: contain;
+        background: #000;
+    }
+    .zone-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        cursor: crosshair;
+        pointer-events: none;
+    }
+    .camera-stage.drawing .zone-canvas {
+        pointer-events: auto;
+    }
+    .zone-hint {
+        min-height: 26px;
+        padding-top: 7px;
+        color: #8793aa;
+        font-size: 12px;
+    }
+    .log-card {
+        padding: 13px;
+        height: fit-content;
+        max-height: calc(100vh - 105px);
+        overflow: hidden;
+    }
+    .log-title {
+        color: #ff6666;
+        font-size: 20px;
+        font-weight: 700;
+        padding: 6px 0 12px;
+        border-bottom: 1px solid #2b3243;
+    }
+    .log-table-head {
+        display: grid;
+        grid-template-columns: 78px 1fr;
+        color: #8995aa;
+        font-size: 12px;
+        padding: 12px 8px 8px;
+        border-bottom: 1px solid #2b3243;
+    }
+    .logs {
+        max-height: calc(100vh - 210px);
+        overflow-y: auto;
+    }
+    .empty-log {
+        color: #66738b;
+        text-align: center;
+        padding: 35px 10px;
+        font-size: 13px;
+    }
+    .log-item {
+        display: grid;
+        grid-template-columns: 78px 1fr;
+        gap: 8px;
+        padding: 12px 8px;
+        border-bottom: 1px solid #282e3c;
+    }
+    .log-time {
+        color: #b8c1d2;
+        font-size: 13px;
+    }
+    .log-camera {
+        color: #dce6f5;
+        font-weight: 700;
+        font-size: 13px;
+    }
+    .log-event {
+        margin-top: 3px;
+        color: #eef2f8;
+        font-size: 13px;
+    }
+    .critical {
+        display: inline-block;
+        margin-top: 5px;
+        padding: 3px 6px;
+        border-radius: 4px;
+        background: #ef4351;
+        color: white;
+        font-size: 10px;
+        font-weight: 700;
+    }
+    .confidence {
+        display: block;
+        margin-top: 5px;
+        color: #8391aa;
+        font-size: 11px;
+    }
+    .controlbar {
+        margin-top: 14px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .status-btn {
+        min-width: 138px;
+    }
+    .detect-on { background: #69df7e; color: #061009; }
+    .detect-off { background: #6d7482; color: white; }
+    .alarm-on { background: #ffba43; color: #171009; }
+    .night { background: #303847; color: #70e589; }
+    .system-message {
+        color: #7f8ca4;
+        font-size: 12px;
+        margin-left: 4px;
+    }
+    @media (max-width: 950px) {
+        .layout { grid-template-columns: 1fr; }
+        .log-card { max-height: 500px; }
+        .logs { max-height: 380px; }
+    }
+    @media (max-width: 700px) {
+        .camera-grid.all { grid-template-columns: 1fr; }
+        .camera-head { align-items: flex-start; flex-direction: column; }
+    }
+</style>
+</head>
+
+<body>
+<header class="topbar">
+    <span class="brand">SMART SENTINELS <span>| Multi-Channel NVR</span></span>
+    <span class="live">SYSTEM LIVE</span>
+</header>
+
+<div class="viewbar">
+    <strong>CAMERA VIEW:</strong>
+    <button id="view1" class="active" onclick="setView('1')">CAM 1</button>
+    <button id="view2" onclick="setView('2')">CAM 2</button>
+    <button id="viewAll" onclick="setView('all')">ALL</button>
+</div>
+
+<main class="layout">
+    <section>
+        <div id="cameraGrid" class="camera-grid">
+            <div class="camera-card" id="card1">
+                <div class="camera-head">
+                    <div class="camera-title">CAM-01: <span>Main Sector</span></div>
+                    <div class="camera-buttons">
+                        <button onclick="startZone('1')">Set Zone</button>
+                        <button onclick="finishZone('1')">Finish</button>
+                        <button onclick="clearZone('1')">Clear Zone</button>
+                    </div>
+                </div>
+                <div class="camera-stage" id="stage1">
+                    <img id="video1" src="/video_feed/1" alt="CAM-01">
+                    <canvas id="canvas1" class="zone-canvas"></canvas>
+                </div>
+                <div class="zone-hint" id="hint1">Draw a restricted zone before detection can run.</div>
+            </div>
+
+            <div class="camera-card" id="card2" style="display:none;">
+                <div class="camera-head">
+                    <div class="camera-title">CAM-02: <span>Night Vision Asset</span></div>
+                    <div class="camera-buttons">
+                        <button onclick="startZone('2')">Set Zone</button>
+                        <button onclick="finishZone('2')">Finish</button>
+                        <button onclick="clearZone('2')">Clear Zone</button>
+                    </div>
+                </div>
+                <div class="camera-stage" id="stage2">
+                    <img id="video2" src="/video_feed/2" alt="CAM-02">
+                    <canvas id="canvas2" class="zone-canvas"></canvas>
+                </div>
+                <div class="zone-hint" id="hint2">Draw a restricted zone before detection can run.</div>
+            </div>
+        </div>
+
+        <div class="controlbar">
+            <button id="detectionButton" class="status-btn detect-on" onclick="toggleDetection()">AI Detection: ON</button>
+            <button id="alarmButton" class="status-btn" onclick="toggleAlarm()">🔊 System Alarm: OFF</button>
+            <button id="nightButton" class="status-btn night" onclick="toggleNight()">🌙 Global Night Vision Filter</button>
+            <span id="systemMessage" class="system-message">Draw a zone before detection can run.</span>
+        </div>
+    </section>
+
+    <aside class="log-card">
+        <div class="log-title">Incident Alert Log</div>
+        <div class="log-table-head">
+            <div>Time</div>
+            <div>Event Log</div>
+        </div>
+        <div id="logs" class="logs">
+            <div class="empty-log">No incidents yet. Monitoring matrix...</div>
+        </div>
+    </aside>
+</main>
+
+<script>
+const zones = {
+    "1": [],
+    "2": []
+};
+
+const drawing = {
+    "1": false,
+    "2": false
+};
+
+let currentView = "1";
+
+function setView(view) {
+    currentView = view;
+
+    document.getElementById("view1").classList.toggle("active", view === "1");
+    document.getElementById("view2").classList.toggle("active", view === "2");
+    document.getElementById("viewAll").classList.toggle("active", view === "all");
+
+    const card1 = document.getElementById("card1");
+    const card2 = document.getElementById("card2");
+    const grid = document.getElementById("cameraGrid");
+
+    if (view === "1") {
+        card1.style.display = "";
+        card2.style.display = "none";
+        grid.classList.remove("all");
+    } else if (view === "2") {
+        card1.style.display = "none";
+        card2.style.display = "";
+        grid.classList.remove("all");
+    } else {
+        card1.style.display = "";
+        card2.style.display = "";
+        grid.classList.add("all");
+    }
+
+    setTimeout(() => {
+        resizeCanvas("1");
+        resizeCanvas("2");
+    }, 50);
+}
+
+function resizeCanvas(cam) {
+    const stage = document.getElementById("stage" + cam);
+    const canvas = document.getElementById("canvas" + cam);
+    if (!stage || !canvas) return;
+
+    const rect = stage.getBoundingClientRect();
+    const oldZones = zones[cam];
+
+    canvas.width = Math.max(1, Math.round(rect.width));
+    canvas.height = Math.max(1, Math.round(rect.height));
+
+    drawZoneCanvas(cam, oldZones);
+}
+
+function drawZoneCanvas(cam, points = zones[cam]) {
+    const canvas = document.getElementById("canvas" + cam);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!points || points.length === 0) return;
+
+    const px = points.map(p => ({
+        x: p.x * canvas.width,
+        y: p.y * canvas.height
+    }));
+
+    if (px.length >= 3) {
+        ctx.beginPath();
+        ctx.moveTo(px[0].x, px[0].y);
+        for (let i = 1; i < px.length; i++) {
+            ctx.lineTo(px[i].x, px[i].y);
+        }
+        ctx.closePath();
+
+        ctx.fillStyle = "rgba(255, 0, 0, 0.12)";
+        ctx.fill();
+
+        ctx.strokeStyle = "#ff3d2e";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    } else {
+        ctx.strokeStyle = "#ff3d2e";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(px[0].x, px[0].y);
+        for (let i = 1; i < px.length; i++) {
+            ctx.lineTo(px[i].x, px[i].y);
+        }
+        ctx.stroke();
+    }
+
+    px.forEach((p, i) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#ff3d2e";
+        ctx.fill();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "11px Arial";
+        ctx.fillText(String(i + 1), p.x + 8, p.y - 8);
+    });
+}
+
+async function startZone(cam) {
+    drawing[cam] = true;
+    zones[cam] = [];
+
+    const stage = document.getElementById("stage" + cam);
+    stage.classList.add("drawing");
+
+    resizeCanvas(cam);
+    drawZoneCanvas(cam);
+
+    document.getElementById("hint" + cam).textContent =
+        "Click on the video to add zone points. Add at least 3 points, then click Finish.";
+    document.getElementById("systemMessage").textContent =
+        `CAM-${cam === "1" ? "01" : "02"}: drawing restricted zone...`;
+}
+
+async function addZonePoint(cam, event) {
+    if (!drawing[cam]) return;
+
+    const canvas = document.getElementById("canvas" + cam);
+    const rect = canvas.getBoundingClientRect();
+
+    const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+
+    if (zones[cam].length >= 20) return;
+
+    try {
+        const response = await fetch("/api/add_point", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                cam_id: cam,
+                x_percent: x,
+                y_percent: y
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.status === "success") {
+            zones[cam].push({x: x, y: y});
+            drawZoneCanvas(cam);
+
+            document.getElementById("hint" + cam).textContent =
+                `${data.points} zone point(s). Add at least 3 points and click Finish.`;
+        }
+    } catch (error) {
+        console.error("Zone point error:", error);
+    }
+}
+
+async function finishZone(cam) {
+    drawing[cam] = false;
+    document.getElementById("stage" + cam).classList.remove("drawing");
+
+    if (zones[cam].length < 3) {
+        document.getElementById("hint" + cam).textContent =
+            "At least 3 points are required.";
+        document.getElementById("systemMessage").textContent =
+            `CAM-${cam === "1" ? "01" : "02"}: zone needs at least 3 points.`;
+        return;
+    }
+
+    drawZoneCanvas(cam);
+
+    document.getElementById("hint" + cam).textContent =
+        `Restricted zone active (${zones[cam].length} points). Detection is limited to this zone.`;
+
+    document.getElementById("systemMessage").textContent =
+        `CAM-${cam === "1" ? "01" : "02"} zone finished. Detection is active when AI Detection is ON.`;
+}
+
+async function clearZone(cam) {
+    drawing[cam] = false;
+    zones[cam] = [];
+
+    document.getElementById("stage" + cam).classList.remove("drawing");
+    drawZoneCanvas(cam);
+
+    try {
+        await fetch("/api/clear_zone", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({cam_id: cam})
+        });
+    } catch (error) {
+        console.error("Clear zone error:", error);
+    }
+
+    document.getElementById("hint" + cam).textContent =
+        "No restricted zone configured. Detection is disabled for this camera.";
+
+    document.getElementById("systemMessage").textContent =
+        `CAM-${cam === "1" ? "01" : "02"} zone cleared. Detection will not run on this camera.`;
+}
+
+async function toggleDetection() {
+    try {
+        const response = await fetch("/api/toggle_detection", {method: "POST"});
+        const data = await response.json();
+
+        updateDetectionButton(data.detection_enabled);
+    } catch (error) {
+        console.error("Detection toggle error:", error);
+    }
+}
+
+function updateDetectionButton(on) {
+    const button = document.getElementById("detectionButton");
+
+    button.textContent = `AI Detection: ${on ? "ON" : "OFF"}`;
+    button.classList.toggle("detect-on", on);
+    button.classList.toggle("detect-off", !on);
+}
+
+async function toggleAlarm() {
+    try {
+        const response = await fetch("/api/toggle_alarm", {method: "POST"});
+        const data = await response.json();
+
+        const button = document.getElementById("alarmButton");
+        button.textContent = `🔊 System Alarm: ${data.alarm_enabled ? "ON" : "OFF"}`;
+        button.classList.toggle("alarm-on", data.alarm_enabled);
+    } catch (error) {
+        console.error("Alarm toggle error:", error);
+    }
+}
+
+async function toggleNight() {
+    try {
+        const response = await fetch("/api/toggle_night", {method: "POST"});
+        const data = await response.json();
+
+        const button = document.getElementById("nightButton");
+        button.textContent = data.night_mode
+            ? "☀️ Night Vision Filter: ON"
+            : "🌙 Global Night Vision Filter";
+    } catch (error) {
+        console.error("Night mode error:", error);
+    }
+}
+
+function renderAlerts(alerts) {
+    const container = document.getElementById("logs");
+
+    if (!alerts || alerts.length === 0) {
+        container.innerHTML =
+            '<div class="empty-log">No incidents yet. Monitoring matrix...</div>';
+        return;
+    }
+
+    container.innerHTML = alerts.map(alert => `
+        <div class="log-item">
+            <div class="log-time">${escapeHtml(alert.time || "")}</div>
+            <div>
+                <div class="log-camera">${escapeHtml(alert.camera || "")}</div>
+                <div class="log-event">${escapeHtml(alert.event || "")}</div>
+                <span class="critical">${escapeHtml(alert.severity || "CRITICAL")}</span>
+                <span class="confidence">Confidence: ${Number(alert.confidence || 0).toFixed(1)}%</span>
+            </div>
+        </div>
+    `).join("");
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+async function loadAlerts() {
+    try {
+        const response = await fetch("/api/alerts", {cache: "no-store"});
+        if (response.ok) {
+            renderAlerts(await response.json());
+        }
+    } catch (error) {
+        console.error("Alert refresh error:", error);
+    }
+}
+
+async function loadDetectionStatus() {
+    try {
+        const response = await fetch("/api/detection_status", {cache: "no-store"});
+        if (response.ok) {
+            const data = await response.json();
+            updateDetectionButton(data.detection_enabled);
+        }
+    } catch (error) {
+        console.error("Detection status error:", error);
+    }
+}
+
+async function loadZoneStatus() {
+    try {
+        const response = await fetch("/api/zone_status", {cache: "no-store"});
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        ["1", "2"].forEach(cam => {
+            const item = data[cam];
+            if (!item) return;
+
+            // Do not overwrite locally drawn points.
+            if (!drawing[cam] && item.points === 0 && zones[cam].length > 0) {
+                zones[cam] = [];
+                drawZoneCanvas(cam);
+            }
+
+            if (item.ready && !drawing[cam]) {
+                document.getElementById("hint" + cam).textContent =
+                    `Restricted zone active (${item.points} points). Detection is limited to this zone.`;
+            }
+        });
+    } catch (error) {
+        console.error("Zone status error:", error);
+    }
+}
+
+async function loadDiagnostics() {
+    try {
+        const response = await fetch("/api/diagnostics", {cache: "no-store"});
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        let messages = [];
+
+        ["1", "2"].forEach(cam => {
+            const d = data[cam];
+            if (!d) return;
+
+            const label = `CAM-${cam === "1" ? "01" : "02"}`;
+
+            if (d.zone_ready && d.detection_enabled) {
+                messages.push(
+                    `${label}: ${d.raw_objects} detected / ${d.objects_in_zone} in zone`
+                );
+            }
+        });
+
+        if (messages.length > 0) {
+            document.getElementById("systemMessage").textContent = messages.join("  |  ");
+        }
+    } catch (error) {
+        console.error("Diagnostics error:", error);
+    }
+}
+
+function attachCanvasEvents(cam) {
+    const canvas = document.getElementById("canvas" + cam);
+
+    canvas.addEventListener("click", event => {
+        addZonePoint(cam, event);
+    });
+}
+
+window.addEventListener("resize", () => {
+    resizeCanvas("1");
+    resizeCanvas("2");
+});
+
+document.getElementById("video1").addEventListener("load", () => resizeCanvas("1"));
+document.getElementById("video2").addEventListener("load", () => resizeCanvas("2"));
+
+attachCanvasEvents("1");
+attachCanvasEvents("2");
+
+setView("1");
+loadAlerts();
+loadDetectionStatus();
+loadZoneStatus();
+
+setInterval(loadAlerts, 1000);
+setInterval(loadZoneStatus, 1500);
+setInterval(loadDiagnostics, 2000);
+</script>
+</body>
+</html>
